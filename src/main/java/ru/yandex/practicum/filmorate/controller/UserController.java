@@ -1,88 +1,66 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
-@Slf4j
 @RestController
 @RequestMapping("/users")
 public class UserController {
-    private final Map<Integer, User> users = new LinkedHashMap<>();
-    private int nextId = 1;
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping
     public List<User> findAll() {
-        return new ArrayList<>(users.values());
+        return userService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public User findById(@PathVariable int id) {
+        return userService.findById(id);
     }
 
     @PostMapping
     public User create(@RequestBody User user) {
-        validate(user);
-        setDefaultName(user);
-        user.setId(getNextId());
-        users.put(user.getId(), user);
-        log.info("Created user: {}", user);
-        return user;
+        return userService.create(user);
     }
 
     @PutMapping
     public User update(@RequestBody User user) {
-        validate(user);
-        if (!exists(user)) {
-            log.warn("User with id={} not found", user.getId());
-            throw new NotFoundException("User with id=" + user.getId() + " not found");
-        }
-        setDefaultName(user);
-        users.put(user.getId(), user);
-        log.info("Updated user: {}", user);
-        return user;
+        return userService.update(user);
     }
 
-    private void validate(User user) {
-        if (user == null) {
-            log.warn("User is not passed");
-            throw new ValidationException("User is not passed");
-        }
-        if (!StringUtils.hasText(user.getEmail()) || !user.getEmail().contains("@")) {
-            log.warn("Incorrect email");
-            throw new ValidationException("Email cannot be empty and must contain @");
-        }
-        if (!StringUtils.hasText(user.getLogin()) || user.getLogin().matches(".*\\s.*")) {
-            log.warn("Incorrect user login");
-            throw new ValidationException("Login cannot be empty or contain spaces");
-        }
-        if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
-            log.warn("User birthday cannot be in the future");
-            throw new ValidationException("Birthday cannot be in the future");
-        }
+    @PutMapping("/{id}/friends/{friendId}")
+    public void addFriend(@PathVariable int id, @PathVariable int friendId) {
+        userService.addFriend(id, friendId);
     }
 
-    private void setDefaultName(User user) {
-        if (!StringUtils.hasText(user.getName())) {
-            user.setName(user.getLogin());
-        }
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public void deleteFriend(@PathVariable int id, @PathVariable int friendId) {
+        userService.deleteFriend(id, friendId);
     }
 
-    private boolean exists(User user) {
-        return users.containsKey(user.getId());
+    @GetMapping("/{id}/friends")
+    public List<User> findFriends(@PathVariable int id) {
+        return userService.findFriends(id);
     }
 
-    private int getNextId() {
-        return nextId++;
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public List<User> findCommonFriends(@PathVariable int id, @PathVariable int otherId) {
+        return userService.findCommonFriends(id, otherId);
     }
 }
