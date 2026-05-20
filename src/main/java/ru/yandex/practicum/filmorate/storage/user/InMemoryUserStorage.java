@@ -20,11 +20,34 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
+    public List<User> findFriends(int id) {
+        User user = findById(id);
+        return users.values().stream()
+                .filter(friend -> user.getFriends().contains(friend.getId()))
+                .toList();
+    }
+
+    @Override
+    public List<User> findCommonFriends(int id, int otherId) {
+        User user = findById(id);
+        User otherUser = findById(otherId);
+        return users.values().stream()
+                .filter(friend -> user.getFriends().contains(friend.getId()))
+                .filter(friend -> otherUser.getFriends().contains(friend.getId()))
+                .toList();
+    }
+
+    @Override
     public User findById(int id) {
         if (!users.containsKey(id)) {
             throw new NotFoundException("User with id=" + id + " not found");
         }
         return users.get(id);
+    }
+
+    @Override
+    public boolean existsById(int id) {
+        return users.containsKey(id);
     }
 
     @Override

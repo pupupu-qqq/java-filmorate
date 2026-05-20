@@ -7,6 +7,8 @@ import java.util.List;
 public interface FilmStorage {
     List<Film> findAll();
 
+    List<Film> findPopular(int count);
+
     Film findById(int id);
 
     Film create(Film film);

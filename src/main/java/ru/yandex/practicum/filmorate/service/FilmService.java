@@ -4,13 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -54,7 +54,7 @@ public class FilmService {
 
     public void addLike(int id, int userId) {
         Film film = filmStorage.findById(id);
-        userStorage.findById(userId);
+        checkUserExists(userId);
         film.getLikes().add(userId);
         filmStorage.update(film);
         log.info("User with id={} liked film with id={}", userId, id);
@@ -62,7 +62,7 @@ public class FilmService {
 
     public void deleteLike(int id, int userId) {
         Film film = filmStorage.findById(id);
-        userStorage.findById(userId);
+        checkUserExists(userId);
         film.getLikes().remove(userId);
         filmStorage.update(film);
         log.info("User with id={} deleted like from film with id={}", userId, id);
@@ -73,10 +73,14 @@ public class FilmService {
             log.warn("Popular films count cannot be negative");
             throw new ValidationException("Popular films count cannot be negative");
         }
-        return filmStorage.findAll().stream()
-                .sorted(Comparator.comparingInt((Film film) -> film.getLikes().size()).reversed())
-                .limit(count)
-                .toList();
+        return filmStorage.findPopular(count);
+    }
+
+    private void checkUserExists(int userId) {
+        if (!userStorage.existsById(userId)) {
+            log.warn("User with id={} not found", userId);
+            throw new NotFoundException("User with id=" + userId + " not found");
+        }
     }
 
     private void validate(Film film) {

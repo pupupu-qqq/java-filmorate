@@ -68,19 +68,11 @@ public class UserService {
     }
 
     public List<User> findFriends(int id) {
-        User user = userStorage.findById(id);
-        return user.getFriends().stream()
-                .map(userStorage::findById)
-                .toList();
+        return userStorage.findFriends(id);
     }
 
     public List<User> findCommonFriends(int id, int otherId) {
-        User user = userStorage.findById(id);
-        User otherUser = userStorage.findById(otherId);
-        return user.getFriends().stream()
-                .filter(otherUser.getFriends()::contains)
-                .map(userStorage::findById)
-                .toList();
+        return userStorage.findCommonFriends(id, otherId);
     }
 
     private void validate(User user) {
