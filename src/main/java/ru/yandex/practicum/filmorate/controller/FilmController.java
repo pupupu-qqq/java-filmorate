@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,7 +45,7 @@ public class FilmController {
     @PutMapping
     public Film update(@RequestBody Film film) {
         validate(film);
-        if (!films.containsKey(film.getId())) {
+        if (!exists(film)) {
             log.warn("Film with id={} not found", film.getId());
             throw new NotFoundException("Film with id=" + film.getId() + " not found");
         }
@@ -58,7 +59,7 @@ public class FilmController {
             log.warn("Film is not passed");
             throw new ValidationException("Film is not passed");
         }
-        if (film.getName() == null || film.getName().isBlank()) {
+        if (!StringUtils.hasText(film.getName())) {
             log.warn("Film name cannot be empty");
             throw new ValidationException("Film name cannot be empty");
         }
@@ -74,6 +75,10 @@ public class FilmController {
             log.warn("Film duration must be positive");
             throw new ValidationException("Film duration must be positive");
         }
+    }
+
+    private boolean exists(Film film) {
+        return films.containsKey(film.getId());
     }
 
     private int getNextId() {

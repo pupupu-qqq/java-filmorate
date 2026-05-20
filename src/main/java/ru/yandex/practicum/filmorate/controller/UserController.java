@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,7 +43,7 @@ public class UserController {
     @PutMapping
     public User update(@RequestBody User user) {
         validate(user);
-        if (!users.containsKey(user.getId())) {
+        if (!exists(user)) {
             log.warn("User with id={} not found", user.getId());
             throw new NotFoundException("User with id=" + user.getId() + " not found");
         }
@@ -57,11 +58,11 @@ public class UserController {
             log.warn("User is not passed");
             throw new ValidationException("User is not passed");
         }
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+        if (!StringUtils.hasText(user.getEmail()) || !user.getEmail().contains("@")) {
             log.warn("Incorrect email");
             throw new ValidationException("Email cannot be empty and must contain @");
         }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().matches(".*\\s.*")) {
+        if (!StringUtils.hasText(user.getLogin()) || user.getLogin().matches(".*\\s.*")) {
             log.warn("Incorrect user login");
             throw new ValidationException("Login cannot be empty or contain spaces");
         }
@@ -72,9 +73,13 @@ public class UserController {
     }
 
     private void setDefaultName(User user) {
-        if (user.getName() == null || user.getName().isBlank()) {
+        if (!StringUtils.hasText(user.getName())) {
             user.setName(user.getLogin());
         }
+    }
+
+    private boolean exists(User user) {
+        return users.containsKey(user.getId());
     }
 
     private int getNextId() {
