@@ -43,7 +43,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> findFriends(int id) {
-        findById(id);
+        checkUserExists(id);
         String sql = """
                 SELECT u.id, u.email, u.login, u.name, u.birthday
                 FROM users AS u
@@ -56,8 +56,8 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> findCommonFriends(int id, int otherId) {
-        findById(id);
-        findById(otherId);
+        checkUserExists(id);
+        checkUserExists(otherId);
         String sql = """
                 SELECT u.id, u.email, u.login, u.name, u.birthday
                 FROM users AS u
@@ -107,7 +107,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User update(User user) {
-        findById(user.getId());
+        checkUserExists(user.getId());
         String sql = """
                 UPDATE users
                 SET email = ?,
@@ -129,23 +129,29 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void delete(int id) {
-        findById(id);
+        checkUserExists(id);
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", id);
     }
 
     @Override
     public void addFriend(int id, int friendId) {
-        findById(id);
-        findById(friendId);
+        checkUserExists(id);
+        checkUserExists(friendId);
         String sql = "MERGE INTO user_friends (user_id, friend_id) KEY (user_id, friend_id) VALUES (?, ?)";
         jdbcTemplate.update(sql, id, friendId);
     }
 
     @Override
     public void deleteFriend(int id, int friendId) {
-        findById(id);
-        findById(friendId);
+        checkUserExists(id);
+        checkUserExists(friendId);
         jdbcTemplate.update("DELETE FROM user_friends WHERE user_id = ? AND friend_id = ?", id, friendId);
+    }
+
+    private void checkUserExists(int id) {
+        if (!existsById(id)) {
+            throw new NotFoundException("User with id=" + id + " not found");
+        }
     }
 
     private Set<Integer> findFriendIdsByUserId(int id) {
