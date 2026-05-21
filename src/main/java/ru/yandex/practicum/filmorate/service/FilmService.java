@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -23,7 +24,10 @@ public class FilmService {
     private final UserStorage userStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
+    public FilmService(
+            @Qualifier("filmDbStorage") FilmStorage filmStorage,
+            @Qualifier("userDbStorage") UserStorage userStorage
+    ) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
     }
@@ -53,18 +57,16 @@ public class FilmService {
     }
 
     public void addLike(int id, int userId) {
-        Film film = filmStorage.findById(id);
+        filmStorage.findById(id);
         checkUserExists(userId);
-        film.getLikes().add(userId);
-        filmStorage.update(film);
+        filmStorage.addLike(id, userId);
         log.info("User with id={} liked film with id={}", userId, id);
     }
 
     public void deleteLike(int id, int userId) {
-        Film film = filmStorage.findById(id);
+        filmStorage.findById(id);
         checkUserExists(userId);
-        film.getLikes().remove(userId);
-        filmStorage.update(film);
+        filmStorage.deleteLike(id, userId);
         log.info("User with id={} deleted like from film with id={}", userId, id);
     }
 
