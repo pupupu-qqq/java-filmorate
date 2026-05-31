@@ -6,11 +6,13 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.director.DirectorDbStorage;
 import ru.yandex.practicum.filmorate.storage.event.EventDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreDbStorage;
@@ -33,7 +35,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         GenreDbStorage.class,
         MpaDbStorage.class,
         ReviewDbStorage.class,
-        EventDbStorage.class
+        EventDbStorage.class,
+        DirectorDbStorage.class
 })
 class DbStorageTest {
     private final FilmDbStorage filmStorage;
@@ -42,6 +45,7 @@ class DbStorageTest {
     private final MpaDbStorage mpaStorage;
     private final ReviewDbStorage reviewStorage;
     private final EventDbStorage eventStorage;
+    private final DirectorDbStorage directorStorage;
 
     @Autowired
     DbStorageTest(
@@ -50,7 +54,8 @@ class DbStorageTest {
             GenreDbStorage genreStorage,
             MpaDbStorage mpaStorage,
             ReviewDbStorage reviewStorage,
-            EventDbStorage eventStorage
+            EventDbStorage eventStorage,
+            DirectorDbStorage directorStorage
     ) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
@@ -58,6 +63,7 @@ class DbStorageTest {
         this.mpaStorage = mpaStorage;
         this.reviewStorage = reviewStorage;
         this.eventStorage = eventStorage;
+        this.directorStorage = directorStorage;
     }
 
     @Test
@@ -161,6 +167,35 @@ class DbStorageTest {
     }
 
     @Test
+    void shouldWorkWithDirectorsAndCommonFilms() {
+        User firstUser = userStorage.create(makeUser("common-first@example.com", "common-first"));
+        User secondUser = userStorage.create(makeUser("common-second@example.com", "common-second"));
+        Director director = directorStorage.create(makeDirector("Director"));
+        Film film = makeFilm("Directed film", 1, Set.of(1));
+        film.setDirectors(new LinkedHashSet<>(Set.of(director)));
+        Film savedFilm = filmStorage.create(film);
+
+        filmStorage.addLike(savedFilm.getId(), firstUser.getId());
+        filmStorage.addLike(savedFilm.getId(), secondUser.getId());
+
+        assertThat(filmStorage.findCommon(firstUser.getId(), secondUser.getId()))
+                .extracting(Film::getId)
+                .containsExactly(savedFilm.getId());
+        assertThat(filmStorage.findPopular(10, 1, 2000))
+                .extracting(Film::getId)
+                .contains(savedFilm.getId());
+        assertThat(filmStorage.findByDirector(director.getId(), "year"))
+                .extracting(Film::getId)
+                .containsExactly(savedFilm.getId());
+
+        director.setName("Updated director");
+        assertThat(directorStorage.update(director).getName()).isEqualTo("Updated director");
+        directorStorage.delete(director.getId());
+        assertThatThrownBy(() -> directorStorage.findById(director.getId()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void shouldWorkWithDictionaryStorages() {
         assertThat(mpaStorage.findAll()).hasSize(5);
         assertThat(mpaStorage.findById(3).getName()).isEqualTo("PG-13");
@@ -204,5 +239,11 @@ class DbStorageTest {
         Genre genre = new Genre();
         genre.setId(id);
         return genre;
+    }
+
+    private Director makeDirector(String name) {
+        Director director = new Director();
+        director.setName(name);
+        return director;
     }
 }

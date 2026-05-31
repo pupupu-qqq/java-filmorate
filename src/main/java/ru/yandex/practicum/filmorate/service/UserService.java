@@ -66,6 +66,11 @@ public class UserService {
         return updatedUser;
     }
 
+    public void delete(int id) {
+        userStorage.delete(id);
+        log.info("Deleted user with id={}", id);
+    }
+
     public void addFriend(int id, int friendId) {
         userStorage.addFriend(id, friendId);
         addEvent(id, "FRIEND", "ADD", friendId);

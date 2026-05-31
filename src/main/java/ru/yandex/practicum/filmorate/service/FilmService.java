@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.event.EventStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -24,22 +25,26 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
     private final EventStorage eventStorage;
+    private final DirectorStorage directorStorage;
 
     @Autowired
     public FilmService(
             @Qualifier("filmDbStorage") FilmStorage filmStorage,
             @Qualifier("userDbStorage") UserStorage userStorage,
-            EventStorage eventStorage
+            EventStorage eventStorage,
+            DirectorStorage directorStorage
     ) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.eventStorage = eventStorage;
+        this.directorStorage = directorStorage;
     }
 
     public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.eventStorage = null;
+        this.directorStorage = null;
     }
 
     public List<Film> findAll() {
@@ -66,6 +71,11 @@ public class FilmService {
         return updatedFilm;
     }
 
+    public void delete(int id) {
+        filmStorage.delete(id);
+        log.info("Deleted film with id={}", id);
+    }
+
     public void addLike(int id, int userId) {
         filmStorage.findById(id);
         checkUserExists(userId);
@@ -88,6 +98,30 @@ public class FilmService {
             throw new ValidationException("Popular films count cannot be negative");
         }
         return filmStorage.findPopular(count);
+    }
+
+    public List<Film> findPopular(int count, Integer genreId, Integer year) {
+        if (count < 0) {
+            log.warn("Popular films count cannot be negative");
+            throw new ValidationException("Popular films count cannot be negative");
+        }
+        if (genreId == null && year == null) {
+            return filmStorage.findPopular(count);
+        }
+        return filmStorage.findPopular(count, genreId, year);
+    }
+
+    public List<Film> findCommon(int userId, int friendId) {
+        checkUserExists(userId);
+        checkUserExists(friendId);
+        return filmStorage.findCommon(userId, friendId);
+    }
+
+    public List<Film> findByDirector(int directorId, String sortBy) {
+        if (directorStorage != null && !directorStorage.existsById(directorId)) {
+            throw new NotFoundException("Director with id=" + directorId + " not found");
+        }
+        return filmStorage.findByDirector(directorId, sortBy);
     }
 
     public List<Film> search(String query, String by) {
