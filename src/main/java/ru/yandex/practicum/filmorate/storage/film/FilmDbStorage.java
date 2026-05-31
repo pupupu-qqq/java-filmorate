@@ -76,6 +76,55 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
+    public List<Film> search(String query, String by) {
+        String searchBy = by == null ? null : by.toLowerCase();
+        boolean searchByTitle = searchBy == null || searchBy.contains("title") || searchBy.contains("name");
+        boolean searchByDescription = searchBy == null || searchBy.contains("description");
+        String likeQuery = "%" + query.toLowerCase() + "%";
+
+        if (searchByTitle && searchByDescription) {
+            return jdbcTemplate.query(FILM_SELECT + """
+                    LEFT JOIN film_likes AS fl ON f.id = fl.film_id
+                    WHERE LOWER(f.name) LIKE ? OR LOWER(f.description) LIKE ?
+                    GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                    ORDER BY COUNT(fl.user_id) DESC, f.id
+                    """, filmMapper, likeQuery, likeQuery);
+        }
+        if (searchByDescription) {
+            return jdbcTemplate.query(FILM_SELECT + """
+                    LEFT JOIN film_likes AS fl ON f.id = fl.film_id
+                    WHERE LOWER(f.description) LIKE ?
+                    GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                    ORDER BY COUNT(fl.user_id) DESC, f.id
+                    """, filmMapper, likeQuery);
+        }
+        return jdbcTemplate.query(FILM_SELECT + """
+                LEFT JOIN film_likes AS fl ON f.id = fl.film_id
+                WHERE LOWER(f.name) LIKE ?
+                GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                ORDER BY COUNT(fl.user_id) DESC, f.id
+                """, filmMapper, likeQuery);
+    }
+
+    @Override
+    public List<Film> findRecommendations(int userId) {
+        String sql = FILM_SELECT + """
+                JOIN film_likes AS recommended ON f.id = recommended.film_id
+                JOIN (
+                    SELECT fl.user_id, COUNT(*) AS common_likes
+                    FROM film_likes AS fl
+                    JOIN film_likes AS user_likes ON fl.film_id = user_likes.film_id
+                    WHERE user_likes.user_id = ? AND fl.user_id <> ?
+                    GROUP BY fl.user_id
+                ) AS similar_users ON recommended.user_id = similar_users.user_id
+                WHERE f.id NOT IN (SELECT film_id FROM film_likes WHERE user_id = ?)
+                GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                ORDER BY MAX(similar_users.common_likes) DESC, f.id
+                """;
+        return jdbcTemplate.query(sql, filmMapper, userId, userId, userId);
+    }
+
+    @Override
     public Film findById(int id) {
         return jdbcTemplate.query(FILM_SELECT + " WHERE f.id = ?", filmMapper, id).stream()
                 .findFirst()
