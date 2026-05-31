@@ -2,14 +2,19 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
+import ru.yandex.practicum.filmorate.storage.event.EventStorage;
 import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FilmControllerTest {
     private final UserStorage userStorage = new InMemoryUserStorage();
     private final FilmController controller = new FilmController(
-            new FilmService(new InMemoryFilmStorage(), userStorage)
+            new FilmService(new InMemoryFilmStorage(), userStorage, makeEventStorage(), makeDirectorStorage())
     );
 
     @Test
@@ -97,5 +102,53 @@ class FilmControllerTest {
         user.setName("User");
         user.setBirthday(LocalDate.of(2000, 1, 1));
         return user;
+    }
+
+    private EventStorage makeEventStorage() {
+        return new EventStorage() {
+            @Override
+            public void addEvent(int userId, String eventType, String operation, int entityId) {
+            }
+
+            @Override
+            public List<Event> findByUserId(int userId) {
+                return List.of();
+            }
+        };
+    }
+
+    private DirectorStorage makeDirectorStorage() {
+        return new DirectorStorage() {
+            @Override
+            public List<Director> findAll() {
+                return List.of();
+            }
+
+            @Override
+            public Director findById(int id) {
+                Director director = new Director();
+                director.setId(id);
+                return director;
+            }
+
+            @Override
+            public boolean existsById(int id) {
+                return true;
+            }
+
+            @Override
+            public Director create(Director director) {
+                return director;
+            }
+
+            @Override
+            public Director update(Director director) {
+                return director;
+            }
+
+            @Override
+            public void delete(int id) {
+            }
+        };
     }
 }
