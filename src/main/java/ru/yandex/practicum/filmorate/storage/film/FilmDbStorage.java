@@ -122,14 +122,35 @@ public class FilmDbStorage implements FilmStorage {
         String searchBy = by == null ? null : by.toLowerCase();
         boolean searchByTitle = searchBy == null || searchBy.contains("title") || searchBy.contains("name");
         boolean searchByDescription = searchBy == null || searchBy.contains("description");
+        boolean searchByDirector = searchBy != null && searchBy.contains("director");
         String likeQuery = "%" + query.toLowerCase() + "%";
 
+        if (searchByDirector) {
+            if (searchByTitle) {
+                return jdbcTemplate.query(FILM_SELECT + """
+                        LEFT JOIN film_likes AS fl ON f.id = fl.film_id
+                        LEFT JOIN film_directors AS fd ON f.id = fd.film_id
+                        LEFT JOIN directors AS d ON fd.director_id = d.id
+                        WHERE LOWER(f.name) LIKE ? OR LOWER(d.name) LIKE ?
+                        GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                        ORDER BY COUNT(DISTINCT fl.user_id) DESC, f.id
+                        """, filmMapper, likeQuery, likeQuery);
+            }
+            return jdbcTemplate.query(FILM_SELECT + """
+                    LEFT JOIN film_likes AS fl ON f.id = fl.film_id
+                    JOIN film_directors AS fd ON f.id = fd.film_id
+                    JOIN directors AS d ON fd.director_id = d.id
+                    WHERE LOWER(d.name) LIKE ?
+                    GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
+                    ORDER BY COUNT(DISTINCT fl.user_id) DESC, f.id
+                    """, filmMapper, likeQuery);
+        }
         if (searchByTitle && searchByDescription) {
             return jdbcTemplate.query(FILM_SELECT + """
                     LEFT JOIN film_likes AS fl ON f.id = fl.film_id
                     WHERE LOWER(f.name) LIKE ? OR LOWER(f.description) LIKE ?
                     GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
-                    ORDER BY COUNT(fl.user_id) DESC, f.id
+                    ORDER BY COUNT(DISTINCT fl.user_id) DESC, f.id
                     """, filmMapper, likeQuery, likeQuery);
         }
         if (searchByDescription) {
@@ -137,14 +158,14 @@ public class FilmDbStorage implements FilmStorage {
                     LEFT JOIN film_likes AS fl ON f.id = fl.film_id
                     WHERE LOWER(f.description) LIKE ?
                     GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
-                    ORDER BY COUNT(fl.user_id) DESC, f.id
+                    ORDER BY COUNT(DISTINCT fl.user_id) DESC, f.id
                     """, filmMapper, likeQuery);
         }
         return jdbcTemplate.query(FILM_SELECT + """
                 LEFT JOIN film_likes AS fl ON f.id = fl.film_id
                 WHERE LOWER(f.name) LIKE ?
                 GROUP BY f.id, f.name, f.description, f.release_date, f.duration, m.id, m.name
-                ORDER BY COUNT(fl.user_id) DESC, f.id
+                ORDER BY COUNT(DISTINCT fl.user_id) DESC, f.id
                 """, filmMapper, likeQuery);
     }
 
