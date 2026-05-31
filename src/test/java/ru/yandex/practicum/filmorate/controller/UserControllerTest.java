@@ -2,17 +2,23 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.event.EventStorage;
+import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class UserControllerTest {
-    private final UserController controller = new UserController(new UserService(new InMemoryUserStorage()));
+    private final UserController controller = new UserController(
+            new UserService(new InMemoryUserStorage(), new InMemoryFilmStorage(), makeEventStorage())
+    );
 
     @Test
     void shouldCreateUserWithValidData() {
@@ -97,5 +103,18 @@ class UserControllerTest {
         user.setName("User");
         user.setBirthday(LocalDate.of(2000, 1, 1));
         return user;
+    }
+
+    private EventStorage makeEventStorage() {
+        return new EventStorage() {
+            @Override
+            public void addEvent(int userId, String eventType, String operation, int entityId) {
+            }
+
+            @Override
+            public List<Event> findByUserId(int userId) {
+                return List.of();
+            }
+        };
     }
 }

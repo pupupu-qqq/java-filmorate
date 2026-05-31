@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.storage.event.EventStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
@@ -54,7 +56,7 @@ public class ReviewService {
         validate(review);
         checkReferences(review);
         Review createdReview = reviewStorage.create(review);
-        eventStorage.addEvent(createdReview.getUserId(), "REVIEW", "ADD", createdReview.getReviewId());
+        addEvent(createdReview.getUserId(), EventOperation.ADD, createdReview.getReviewId());
         log.info("Created review: {}", createdReview);
         return createdReview;
     }
@@ -65,7 +67,7 @@ public class ReviewService {
         review.setUserId(savedReview.getUserId());
         review.setFilmId(savedReview.getFilmId());
         Review updatedReview = reviewStorage.update(review);
-        eventStorage.addEvent(updatedReview.getUserId(), "REVIEW", "UPDATE", updatedReview.getReviewId());
+        addEvent(updatedReview.getUserId(), EventOperation.UPDATE, updatedReview.getReviewId());
         log.info("Updated review: {}", updatedReview);
         return updatedReview;
     }
@@ -73,7 +75,7 @@ public class ReviewService {
     public void delete(int id) {
         Review review = reviewStorage.findById(id);
         reviewStorage.delete(id);
-        eventStorage.addEvent(review.getUserId(), "REVIEW", "REMOVE", id);
+        addEvent(review.getUserId(), EventOperation.REMOVE, id);
         log.info("Deleted review with id={}", id);
     }
 
@@ -118,6 +120,10 @@ public class ReviewService {
     private void checkReferences(Review review) {
         checkUserExists(review.getUserId());
         filmStorage.findById(review.getFilmId());
+    }
+
+    private void addEvent(int userId, EventOperation operation, int reviewId) {
+        eventStorage.addEvent(userId, EventType.REVIEW.name(), operation.name(), reviewId);
     }
 
     private void checkUserExists(int userId) {

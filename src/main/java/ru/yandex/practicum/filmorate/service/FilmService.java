@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.event.EventStorage;
@@ -38,13 +40,6 @@ public class FilmService {
         this.userStorage = userStorage;
         this.eventStorage = eventStorage;
         this.directorStorage = directorStorage;
-    }
-
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-        this.eventStorage = null;
-        this.directorStorage = null;
     }
 
     public List<Film> findAll() {
@@ -80,7 +75,7 @@ public class FilmService {
         filmStorage.findById(id);
         checkUserExists(userId);
         filmStorage.addLike(id, userId);
-        addEvent(userId, "LIKE", "ADD", id);
+        addEvent(userId, EventType.LIKE, EventOperation.ADD, id);
         log.info("User with id={} liked film with id={}", userId, id);
     }
 
@@ -88,7 +83,7 @@ public class FilmService {
         filmStorage.findById(id);
         checkUserExists(userId);
         filmStorage.deleteLike(id, userId);
-        addEvent(userId, "LIKE", "REMOVE", id);
+        addEvent(userId, EventType.LIKE, EventOperation.REMOVE, id);
         log.info("User with id={} deleted like from film with id={}", userId, id);
     }
 
@@ -118,7 +113,7 @@ public class FilmService {
     }
 
     public List<Film> findByDirector(int directorId, String sortBy) {
-        if (directorStorage != null && !directorStorage.existsById(directorId)) {
+        if (!directorStorage.existsById(directorId)) {
             throw new NotFoundException("Director with id=" + directorId + " not found");
         }
         return filmStorage.findByDirector(directorId, sortBy);
@@ -131,10 +126,8 @@ public class FilmService {
         return filmStorage.search(query, by);
     }
 
-    private void addEvent(int userId, String eventType, String operation, int entityId) {
-        if (eventStorage != null) {
-            eventStorage.addEvent(userId, eventType, operation, entityId);
-        }
+    private void addEvent(int userId, EventType eventType, EventOperation operation, int entityId) {
+        eventStorage.addEvent(userId, eventType.name(), operation.name(), entityId);
     }
 
     private void checkUserExists(int userId) {
