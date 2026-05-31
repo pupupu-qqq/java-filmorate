@@ -107,10 +107,10 @@ public class ReviewService {
         if (review.getIsPositive() == null) {
             throw new ValidationException("Review positive flag is not passed");
         }
-        if (review.getUserId() <= 0) {
+        if (review.getUserId() == 0) {
             throw new ValidationException("Review user id is not passed");
         }
-        if (review.getFilmId() <= 0) {
+        if (review.getFilmId() == 0) {
             throw new ValidationException("Review film id is not passed");
         }
     }
