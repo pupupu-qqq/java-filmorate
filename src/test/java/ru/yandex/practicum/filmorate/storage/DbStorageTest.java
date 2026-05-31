@@ -9,13 +9,10 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
-import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.event.EventDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreDbStorage;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaDbStorage;
-import ru.yandex.practicum.filmorate.storage.review.ReviewDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 
 import java.time.LocalDate;
@@ -27,37 +24,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JdbcTest
 @AutoConfigureTestDatabase
-@Import({
-        FilmDbStorage.class,
-        UserDbStorage.class,
-        GenreDbStorage.class,
-        MpaDbStorage.class,
-        ReviewDbStorage.class,
-        EventDbStorage.class
-})
+@Import({FilmDbStorage.class, UserDbStorage.class, GenreDbStorage.class, MpaDbStorage.class})
 class DbStorageTest {
     private final FilmDbStorage filmStorage;
     private final UserDbStorage userStorage;
     private final GenreDbStorage genreStorage;
     private final MpaDbStorage mpaStorage;
-    private final ReviewDbStorage reviewStorage;
-    private final EventDbStorage eventStorage;
 
     @Autowired
     DbStorageTest(
             FilmDbStorage filmStorage,
             UserDbStorage userStorage,
             GenreDbStorage genreStorage,
-            MpaDbStorage mpaStorage,
-            ReviewDbStorage reviewStorage,
-            EventDbStorage eventStorage
+            MpaDbStorage mpaStorage
     ) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.genreStorage = genreStorage;
         this.mpaStorage = mpaStorage;
-        this.reviewStorage = reviewStorage;
-        this.eventStorage = eventStorage;
     }
 
     @Test
@@ -95,26 +79,16 @@ class DbStorageTest {
     @Test
     void shouldWorkWithFilmStorage() {
         User user = userStorage.create(makeUser("user@example.com", "user"));
-        User similarUser = userStorage.create(makeUser("similar@example.com", "similar"));
         Film firstFilm = filmStorage.create(makeFilm("Film", 1, Set.of(1, 2)));
         Film secondFilm = filmStorage.create(makeFilm("Popular", 2, Set.of(3)));
-        Film thirdFilm = filmStorage.create(makeFilm("Searchable", 2, Set.of(3)));
-        thirdFilm.setDescription("magic keyword");
-        thirdFilm = filmStorage.update(thirdFilm);
 
         Film savedFilm = filmStorage.findById(firstFilm.getId());
         assertThat(savedFilm.getMpa().getName()).isEqualTo("G");
         assertThat(savedFilm.getGenres()).extracting(Genre::getName).containsExactly("Комедия", "Драма");
-        assertThat(filmStorage.findAll()).hasSize(3);
+        assertThat(filmStorage.findAll()).hasSize(2);
 
         filmStorage.addLike(secondFilm.getId(), user.getId());
         assertThat(filmStorage.findPopular(1).getFirst().getId()).isEqualTo(secondFilm.getId());
-        assertThat(filmStorage.search("magic", "description")).extracting(Film::getId).contains(thirdFilm.getId());
-
-        filmStorage.addLike(firstFilm.getId(), user.getId());
-        filmStorage.addLike(firstFilm.getId(), similarUser.getId());
-        filmStorage.addLike(thirdFilm.getId(), similarUser.getId());
-        assertThat(filmStorage.findRecommendations(user.getId())).extracting(Film::getId).contains(thirdFilm.getId());
 
         firstFilm.setName("Updated Film");
         firstFilm.setGenres(new LinkedHashSet<>(Set.of(makeGenre(6))));
@@ -127,36 +101,6 @@ class DbStorageTest {
 
         filmStorage.delete(firstFilm.getId());
         assertThatThrownBy(() -> filmStorage.findById(firstFilm.getId()))
-                .isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void shouldWorkWithReviewsAndEvents() {
-        User user = userStorage.create(makeUser("reviewer@example.com", "reviewer"));
-        User otherUser = userStorage.create(makeUser("other@example.com", "other"));
-        Film film = filmStorage.create(makeFilm("Review film", 1, Set.of(1)));
-
-        Review review = new Review();
-        review.setContent("Good film");
-        review.setIsPositive(true);
-        review.setUserId(user.getId());
-        review.setFilmId(film.getId());
-        Review createdReview = reviewStorage.create(review);
-
-        reviewStorage.addReaction(createdReview.getReviewId(), otherUser.getId(), 1);
-        assertThat(reviewStorage.findById(createdReview.getReviewId()).getUseful()).isEqualTo(1);
-
-        createdReview.setContent("Very good film");
-        Review updatedReview = reviewStorage.update(createdReview);
-        assertThat(updatedReview.getContent()).isEqualTo("Very good film");
-
-        eventStorage.addEvent(user.getId(), "REVIEW", "ADD", createdReview.getReviewId());
-        assertThat(eventStorage.findByUserId(user.getId()))
-                .extracting(event -> event.getEventType() + event.getOperation())
-                .containsExactly("REVIEWADD");
-
-        reviewStorage.delete(createdReview.getReviewId());
-        assertThatThrownBy(() -> reviewStorage.findById(createdReview.getReviewId()))
                 .isInstanceOf(NotFoundException.class);
     }
 

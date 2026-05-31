@@ -6,11 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.Event;
-import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.event.EventStorage;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
@@ -20,24 +16,10 @@ import java.util.List;
 @Service
 public class UserService {
     private final UserStorage userStorage;
-    private final FilmStorage filmStorage;
-    private final EventStorage eventStorage;
 
     @Autowired
-    public UserService(
-            @Qualifier("userDbStorage") UserStorage userStorage,
-            @Qualifier("filmDbStorage") FilmStorage filmStorage,
-            EventStorage eventStorage
-    ) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage) {
         this.userStorage = userStorage;
-        this.filmStorage = filmStorage;
-        this.eventStorage = eventStorage;
-    }
-
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
-        this.filmStorage = null;
-        this.eventStorage = null;
     }
 
     public List<User> findAll() {
@@ -68,13 +50,11 @@ public class UserService {
 
     public void addFriend(int id, int friendId) {
         userStorage.addFriend(id, friendId);
-        addEvent(id, "FRIEND", "ADD", friendId);
         log.info("User with id={} added user with id={} to friends", id, friendId);
     }
 
     public void deleteFriend(int id, int friendId) {
         userStorage.deleteFriend(id, friendId);
-        addEvent(id, "FRIEND", "REMOVE", friendId);
         log.info("User with id={} deleted user with id={} from friends", id, friendId);
     }
 
@@ -84,28 +64,6 @@ public class UserService {
 
     public List<User> findCommonFriends(int id, int otherId) {
         return userStorage.findCommonFriends(id, otherId);
-    }
-
-    public List<Film> findRecommendations(int id) {
-        userStorage.findById(id);
-        if (filmStorage == null) {
-            return List.of();
-        }
-        return filmStorage.findRecommendations(id);
-    }
-
-    public List<Event> findFeed(int id) {
-        userStorage.findById(id);
-        if (eventStorage == null) {
-            return List.of();
-        }
-        return eventStorage.findByUserId(id);
-    }
-
-    private void addEvent(int userId, String eventType, String operation, int entityId) {
-        if (eventStorage != null) {
-            eventStorage.addEvent(userId, eventType, operation, entityId);
-        }
     }
 
     private void validate(User user) {

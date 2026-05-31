@@ -9,10 +9,6 @@ public interface FilmStorage {
 
     List<Film> findPopular(int count);
 
-    List<Film> search(String query, String by);
-
-    List<Film> findRecommendations(int userId);
-
     Film findById(int id);
 
     Film create(Film film);

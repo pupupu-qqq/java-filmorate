@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.event.EventStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
@@ -23,23 +22,14 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-    private final EventStorage eventStorage;
 
     @Autowired
     public FilmService(
             @Qualifier("filmDbStorage") FilmStorage filmStorage,
-            @Qualifier("userDbStorage") UserStorage userStorage,
-            EventStorage eventStorage
+            @Qualifier("userDbStorage") UserStorage userStorage
     ) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
-        this.eventStorage = eventStorage;
-    }
-
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-        this.eventStorage = null;
     }
 
     public List<Film> findAll() {
@@ -70,7 +60,6 @@ public class FilmService {
         filmStorage.findById(id);
         checkUserExists(userId);
         filmStorage.addLike(id, userId);
-        addEvent(userId, "LIKE", "ADD", id);
         log.info("User with id={} liked film with id={}", userId, id);
     }
 
@@ -78,7 +67,6 @@ public class FilmService {
         filmStorage.findById(id);
         checkUserExists(userId);
         filmStorage.deleteLike(id, userId);
-        addEvent(userId, "LIKE", "REMOVE", id);
         log.info("User with id={} deleted like from film with id={}", userId, id);
     }
 
@@ -88,19 +76,6 @@ public class FilmService {
             throw new ValidationException("Popular films count cannot be negative");
         }
         return filmStorage.findPopular(count);
-    }
-
-    public List<Film> search(String query, String by) {
-        if (!StringUtils.hasText(query)) {
-            return List.of();
-        }
-        return filmStorage.search(query, by);
-    }
-
-    private void addEvent(int userId, String eventType, String operation, int entityId) {
-        if (eventStorage != null) {
-            eventStorage.addEvent(userId, eventType, operation, entityId);
-        }
     }
 
     private void checkUserExists(int userId) {
